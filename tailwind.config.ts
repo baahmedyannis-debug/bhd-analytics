@@ -17,6 +17,7 @@ const config: Config = {
         instagram: '#f0c060',
         tiktok: '#fe2c55',
         soundcloud: '#ff5500',
+        spotify: '#1DB954',
         youtube: '#ff0000',
         shotgun: '#00d4aa',
         planning: '#7c3aed',
