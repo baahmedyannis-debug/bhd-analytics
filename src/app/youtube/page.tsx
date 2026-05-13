@@ -67,8 +67,8 @@ const videos = [
   { title: 'Sunset Session @ Le Touquet', views: '5 200', duration: '32 min', likes: 156 },
   { title: 'Studio Vlog — Making of Ritual EP', views: '3 100', duration: '12 min', likes: 98 },
   { title: 'Donut & Beats Vol.1 — Recap', views: '2 800', duration: '8 min', likes: 87 },
-  { title: 'DJ Tips — Transitions orientales', views: '2 400', duration: '15 min', likes: 76 },
-  { title: 'Aftermovie Maison Folle 2025', views: '1 200', duration: '4 min', likes: 54 },
+  { title: 'Astuces DJ — Transitions orientales', views: '2 400', duration: '15 min', likes: 76 },
+  { title: 'Récap vidéo Maison Folle 2025', views: '1 200', duration: '4 min', likes: 54 },
 ]
 
 export default function YoutubePage() {
@@ -131,8 +131,8 @@ export default function YoutubePage() {
       <div>
         <h3 className="section-title">Recommandations IA</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <RecommendationCard title="Miniatures personnalisées" description="Les miniatures custom augmentent le CTR de +35%" priority="urgent" impact="high" impactPercent={88} />
-          <RecommendationCard title="Upload hebdomadaire" description="La régularité booste les suggestions YouTube" priority="important" impact="medium" impactPercent={72} />
+          <RecommendationCard title="Miniatures personnalisées" description="Les miniatures personnalisées augmentent le taux de clic de +35%" priority="urgent" impact="high" impactPercent={88} />
+          <RecommendationCard title="Publication hebdomadaire" description="La régularité booste les suggestions YouTube" priority="important" impact="medium" impactPercent={72} />
           <RecommendationCard title="Shorts depuis les lives" description="Découpez vos meilleurs moments en Shorts" priority="growth" impact="medium" impactPercent={65} />
         </div>
       </div>

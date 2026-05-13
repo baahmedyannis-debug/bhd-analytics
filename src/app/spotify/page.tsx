@@ -155,12 +155,12 @@ export default function SpotifyPage() {
       <div>
         <h3 className="section-title">Recommandations IA</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <RecommendationCard title="Pitcher aux playlists éditoriales" description="Soumettez vos sorties 2 semaines avant via Spotify for Artists" priority="urgent" impact="high" impactPercent={92} />
+          <RecommendationCard title="Proposer aux playlists éditoriales" description="Soumettez vos sorties 2 semaines avant via Spotify for Artists" priority="urgent" impact="high" impactPercent={92} />
           <RecommendationCard title="Sortir un single toutes les 4-6 semaines" description="La régularité maintient l'algorithme actif sur votre profil" priority="urgent" impact="high" impactPercent={88} />
-          <RecommendationCard title="Canvas vidéo sur chaque titre" description="Les Canvas augmentent les saves de +20% en moyenne" priority="important" impact="medium" impactPercent={72} />
+          <RecommendationCard title="Vidéo Canvas sur chaque titre" description="Les Canvas augmentent les sauvegardes de +20% en moyenne" priority="important" impact="medium" impactPercent={72} />
           <RecommendationCard title="Optimiser la bio artiste" description="Ajoutez des mots-clés genre (oriental house, afro house) dans la bio" priority="important" impact="medium" impactPercent={65} />
-          <RecommendationCard title="Pre-save campaigns" description="Lancez des campagnes pre-save pour booster le jour de sortie" priority="growth" impact="medium" impactPercent={60} />
-          <RecommendationCard title="Créer des playlists BHD" description="Curatez vos propres playlists pour fidéliser votre audience" priority="growth" impact="low" impactPercent={48} />
+          <RecommendationCard title="Campagnes de pré-sauvegarde" description="Lancez des campagnes pré-save pour booster le jour de sortie" priority="growth" impact="medium" impactPercent={60} />
+          <RecommendationCard title="Créer des playlists BHD" description="Créez vos propres playlists pour fidéliser votre audience" priority="growth" impact="low" impactPercent={48} />
         </div>
       </div>
     </div>

@@ -62,11 +62,11 @@ const metricRings = [
 
 const videos = [
   { title: 'Set Oriental Mix #12', views: '18.4K', likes: '1.2K', duration: '0:45' },
-  { title: 'Behind the scenes Maison Folle', views: '12.1K', likes: '890', duration: '0:30' },
-  { title: 'Drop test nouveau track', views: '9.8K', likes: '720', duration: '0:15' },
-  { title: 'DJ Setup tour 2026', views: '8.5K', likes: '650', duration: '1:00' },
-  { title: 'Transition challenge', views: '7.2K', likes: '540', duration: '0:20' },
-  { title: 'Vinyl vs Digital debate', views: '6.1K', likes: '430', duration: '0:35' },
+  { title: 'Coulisses Maison Folle', views: '12.1K', likes: '890', duration: '0:30' },
+  { title: 'Test drop nouveau morceau', views: '9.8K', likes: '720', duration: '0:15' },
+  { title: 'Visite setup DJ 2026', views: '8.5K', likes: '650', duration: '1:00' },
+  { title: 'Défi transition', views: '7.2K', likes: '540', duration: '0:20' },
+  { title: 'Vinyle vs Numérique', views: '6.1K', likes: '430', duration: '0:35' },
 ]
 
 export default function TiktokPage() {
@@ -143,8 +143,8 @@ export default function TiktokPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <RecommendationCard title="Poster à 19h-21h" description="Pic d'activité de votre audience sur TikTok" priority="urgent" impact="high" impactPercent={92} />
           <RecommendationCard title="Vidéos < 30 secondes" description="Le taux de complétion chute après 30s" priority="urgent" impact="high" impactPercent={88} />
-          <RecommendationCard title="Utiliser les trending sounds" description="Les sons tendance boostent le placement FYP" priority="important" impact="medium" impactPercent={75} />
-          <RecommendationCard title="Hook dans les 3 premières secondes" description="Captez l'attention immédiatement pour garder les viewers" priority="important" impact="medium" impactPercent={70} />
+          <RecommendationCard title="Utiliser les sons tendance" description="Les sons populaires boostent le placement Pour Toi" priority="important" impact="medium" impactPercent={75} />
+          <RecommendationCard title="Accroche dans les 3 premières secondes" description="Captez l'attention immédiatement pour garder les spectateurs" priority="important" impact="medium" impactPercent={70} />
           <RecommendationCard title="Série hebdomadaire" description="Créez un rendez-vous avec votre audience" priority="growth" impact="medium" impactPercent={60} />
           <RecommendationCard title="Duos avec d'autres créateurs" description="Les duos doublent l'exposition" priority="growth" impact="low" impactPercent={50} />
         </div>

@@ -104,8 +104,8 @@ export default function InstagramPage() {
           <RecommendationCard title="Utiliser plus de Reels" description="Les Reels génèrent 3x plus de portée que les posts classiques" priority="urgent" impact="high" impactPercent={85} />
           <RecommendationCard title="Répondre aux commentaires" description="L'engagement dans les 30 min booste l'algorithme" priority="important" impact="medium" impactPercent={70} />
           <RecommendationCard title="Collaborer avec des DJs locaux" description="Les collabs doublent la portée moyenne" priority="important" impact="medium" impactPercent={65} />
-          <RecommendationCard title="Créer des Stories quotidiennes" description="Les Stories maintiennent la visibilité dans le feed" priority="growth" impact="medium" impactPercent={60} />
-          <RecommendationCard title="Hashtags de niche" description="Cibler #orientalhouse #djset pour un meilleur reach" priority="growth" impact="low" impactPercent={45} />
+          <RecommendationCard title="Créer des Stories quotidiennes" description="Les Stories maintiennent la visibilité dans le fil d'actualité" priority="growth" impact="medium" impactPercent={60} />
+          <RecommendationCard title="Hashtags de niche" description="Cibler #orientalhouse #djset pour une meilleure portée" priority="growth" impact="low" impactPercent={45} />
         </div>
       </div>
     </div>

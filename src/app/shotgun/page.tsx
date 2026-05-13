@@ -143,9 +143,9 @@ export default function ShotgunPage() {
       <div>
         <h3 className="section-title">Recommandations IA</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <RecommendationCard title="Early bird pricing" description="Proposez des tarifs réduits pour les premiers acheteurs" priority="important" impact="high" impactPercent={80} />
+          <RecommendationCard title="Tarifs premiers arrivés" description="Proposez des tarifs réduits pour les premiers acheteurs" priority="important" impact="high" impactPercent={80} />
           <RecommendationCard title="Promouvoir 3 semaines avant" description="Commencez la promo plus tôt pour maximiser les ventes" priority="important" impact="medium" impactPercent={70} />
-          <RecommendationCard title="Aftermovie systématique" description="Filmez chaque event pour le contenu post-event" priority="growth" impact="medium" impactPercent={62} />
+          <RecommendationCard title="Récap vidéo systématique" description="Filmez chaque événement pour le contenu post-événement" priority="growth" impact="medium" impactPercent={62} />
         </div>
       </div>
     </div>
