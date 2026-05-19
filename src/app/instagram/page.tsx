@@ -31,12 +31,67 @@ interface InstagramProfile {
   mediaCount: number
 }
 
+interface TopEngagedPost {
+  id: string
+  caption: string
+  permalink?: string
+  thumbnail?: string
+  media_type: string
+  timestamp: string
+  likes: number
+  comments: number
+  engagement: number
+  engagementRate: number
+}
+
+interface TopHashtag {
+  tag: string
+  uses: number
+  avgEngagement: number
+  totalEngagement: number
+}
+
+interface DemoEntry {
+  key: string
+  value: number
+}
+
 interface InstagramData {
   connected: boolean
   error?: string
   profile?: InstagramProfile
   posts?: InstagramPost[]
+  analytics?: {
+    topEngaged?: TopEngagedPost[]
+    topHashtags?: TopHashtag[]
+  }
+  demographics?: {
+    countries?: DemoEntry[]
+    cities?: DemoEntry[]
+    ageGender?: DemoEntry[]
+  }
   insights?: unknown[] | null
+}
+
+// Code pays ISO-2 → drapeau emoji + nom court
+const COUNTRY_NAMES: Record<string, string> = {
+  FR: 'France', BE: 'Belgique', CH: 'Suisse', CA: 'Canada', US: 'États-Unis',
+  GB: 'Royaume-Uni', DE: 'Allemagne', ES: 'Espagne', IT: 'Italie', PT: 'Portugal',
+  NL: 'Pays-Bas', MA: 'Maroc', DZ: 'Algérie', TN: 'Tunisie', SN: 'Sénégal',
+  CI: 'Côte d\'Ivoire', BR: 'Brésil', MX: 'Mexique', AR: 'Argentine',
+  RU: 'Russie', UA: 'Ukraine', PL: 'Pologne', TR: 'Turquie', JP: 'Japon',
+  CN: 'Chine', KR: 'Corée du Sud', AU: 'Australie', IN: 'Inde', ID: 'Indonésie',
+  BD: 'Bangladesh', PK: 'Pakistan', EG: 'Égypte', SA: 'Arabie Saoudite',
+  AE: 'Émirats AU', LB: 'Liban', JO: 'Jordanie', NG: 'Nigeria', ZA: 'Afrique du Sud',
+}
+
+function countryLabel(code: string): string {
+  return COUNTRY_NAMES[code] || code
+}
+
+function flagEmoji(code: string): string {
+  if (!/^[A-Z]{2}$/.test(code)) return ''
+  return String.fromCodePoint(...code.split('').map((c) => 127397 + c.charCodeAt(0)))
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -127,6 +182,48 @@ export default function InstagramPage() {
   const connected = !!data?.connected
   const profile = data?.profile
   const posts = data?.posts || []
+  const topEngaged = data?.analytics?.topEngaged || []
+  const topHashtags = data?.analytics?.topHashtags || []
+  const countries = data?.demographics?.countries || []
+  const cities = data?.demographics?.cities || []
+  const ageGender = data?.demographics?.ageGender || []
+
+  // Pyramide âge/genre — agrégation par tranche d'âge
+  const ageBuckets = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
+  const ageGenderMap: Record<string, { F: number; M: number; U: number }> = {}
+  for (const e of ageGender) {
+    const [age, gender] = e.key.split(' / ')
+    if (!ageGenderMap[age]) ageGenderMap[age] = { F: 0, M: 0, U: 0 }
+    if (gender === 'F') ageGenderMap[age].F += e.value
+    else if (gender === 'M') ageGenderMap[age].M += e.value
+    else ageGenderMap[age].U += e.value
+  }
+  const ageGenderChart = {
+    labels: ageBuckets.filter((a) => ageGenderMap[a]),
+    datasets: [
+      {
+        label: 'Femmes',
+        data: ageBuckets.filter((a) => ageGenderMap[a]).map((a) => ageGenderMap[a].F),
+        backgroundColor: '#ec4899',
+        borderRadius: 4,
+      },
+      {
+        label: 'Hommes',
+        data: ageBuckets.filter((a) => ageGenderMap[a]).map((a) => ageGenderMap[a].M),
+        backgroundColor: '#3b82f6',
+        borderRadius: 4,
+      },
+    ],
+  }
+
+  const ageGenderOptions = {
+    ...chartOptions,
+    plugins: { legend: { display: true, labels: { color: '#aaa' } } },
+  }
+
+  // Max value pour les barres horizontales (pays/villes)
+  const maxCountry = Math.max(1, ...countries.map((c) => c.value))
+  const maxCity = Math.max(1, ...cities.map((c) => c.value))
 
   return (
     <div className="space-y-8">
@@ -220,6 +317,169 @@ export default function InstagramPage() {
           )}
         </div>
       </div>
+
+      {/* ─── Top Posts par engagement ─── */}
+      {connected && topEngaged.length > 0 && (
+        <div>
+          <h3 className="section-title">Top Posts par Engagement</h3>
+          <div className="card">
+            <div className="space-y-3">
+              {topEngaged.map((p, idx) => {
+                const isVideo = p.media_type === 'VIDEO'
+                const content = (
+                  <div className="flex items-center gap-4 p-3 rounded hover:bg-white/5 transition-colors">
+                    <div className="text-2xl font-bold text-[#f0c060] w-8 text-center">
+                      {idx + 1}
+                    </div>
+                    <div className="w-16 h-16 bg-gray-800 rounded overflow-hidden flex-shrink-0 flex items-center justify-center text-2xl">
+                      {p.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.thumbnail} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        isVideo ? '🎬' : '📸'
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-200 line-clamp-2">
+                        {truncate(p.caption || '(sans légende)', 90)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(p.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 text-sm">
+                      <div className="flex gap-3 text-gray-300">
+                        <span title="J'aime">❤️ {formatNumber(p.likes)}</span>
+                        <span title="Commentaires">💬 {formatNumber(p.comments)}</span>
+                      </div>
+                      <div className="text-xs font-semibold text-[#10b981]">
+                        {p.engagementRate}% engagement
+                      </div>
+                    </div>
+                  </div>
+                )
+                return p.permalink ? (
+                  <a key={p.id} href={p.permalink} target="_blank" rel="noopener noreferrer" className="block">
+                    {content}
+                  </a>
+                ) : (
+                  <div key={p.id}>{content}</div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Démographie des followers ─── */}
+      {connected && (countries.length > 0 || cities.length > 0 || ageGender.length > 0) && (
+        <div>
+          <h3 className="section-title">Audience — Démographie</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Pays */}
+            {countries.length > 0 && (
+              <ChartContainer title={`Top ${countries.length} Pays`}>
+                <div className="space-y-2 py-2">
+                  {countries.map((c) => {
+                    const pct = (c.value / maxCountry) * 100
+                    return (
+                      <div key={c.key} className="flex items-center gap-3 text-sm">
+                        <div className="w-28 truncate text-gray-300">
+                          <span className="mr-2">{flagEmoji(c.key)}</span>
+                          {countryLabel(c.key)}
+                        </div>
+                        <div className="flex-1 h-5 bg-white/5 rounded overflow-hidden">
+                          <div
+                            className="h-full bg-[#f0c060] rounded transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="w-12 text-right text-gray-400 font-mono text-xs">
+                          {formatFull(c.value)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ChartContainer>
+            )}
+
+            {/* Villes */}
+            {cities.length > 0 && (
+              <ChartContainer title={`Top ${cities.length} Villes`}>
+                <div className="space-y-2 py-2">
+                  {cities.map((c) => {
+                    const pct = (c.value / maxCity) * 100
+                    // Extraire juste le nom de ville (avant la virgule s'il y en a)
+                    const cityName = c.key.split(',')[0].trim()
+                    return (
+                      <div key={c.key} className="flex items-center gap-3 text-sm">
+                        <div className="w-32 truncate text-gray-300" title={c.key}>
+                          {cityName}
+                        </div>
+                        <div className="flex-1 h-5 bg-white/5 rounded overflow-hidden">
+                          <div
+                            className="h-full bg-[#10b981] rounded transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="w-12 text-right text-gray-400 font-mono text-xs">
+                          {formatFull(c.value)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ChartContainer>
+            )}
+
+            {/* Pyramide âge/genre */}
+            {ageGenderChart.labels.length > 0 && (
+              <div className="lg:col-span-2">
+                <ChartContainer title="Répartition Âge × Genre">
+                  <Bar data={ageGenderChart} options={ageGenderOptions} />
+                </ChartContainer>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Top Hashtags ─── */}
+      {connected && topHashtags.length > 0 && (
+        <div>
+          <h3 className="section-title">Hashtags les Plus Performants</h3>
+          <div className="card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-white/10">
+                    <th className="py-2 px-3 font-medium">#</th>
+                    <th className="py-2 px-3 font-medium">Hashtag</th>
+                    <th className="py-2 px-3 font-medium text-right">Utilisations</th>
+                    <th className="py-2 px-3 font-medium text-right">Engagement moyen</th>
+                    <th className="py-2 px-3 font-medium text-right">Engagement total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topHashtags.map((t, idx) => (
+                    <tr key={t.tag} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="py-2 px-3 text-gray-500">{idx + 1}</td>
+                      <td className="py-2 px-3 font-mono text-[#f0c060]">{t.tag}</td>
+                      <td className="py-2 px-3 text-right text-gray-300">{t.uses}</td>
+                      <td className="py-2 px-3 text-right text-[#10b981] font-semibold">{formatFull(t.avgEngagement)}</td>
+                      <td className="py-2 px-3 text-right text-gray-400">{formatFull(t.totalEngagement)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-500 mt-3 px-3">
+              Calcul sur tes 50 derniers posts · seuls les hashtags utilisés ≥ 2 fois sont affichés
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Churn Analytics (mock) */}
       <div>
