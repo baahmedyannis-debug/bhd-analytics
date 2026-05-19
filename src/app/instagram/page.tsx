@@ -64,6 +64,29 @@ interface ChurnData {
   dailyGains: { date: string; gained: number }[]
 }
 
+interface TrendingHashtag {
+  tag: string
+  djCount: number
+  djs: string[]
+  uses: number
+  avgEngagement: number
+  status: 'aligned' | 'opportunity'
+}
+
+interface DjScan {
+  handle: string
+  postsCount: number
+  followers: number
+}
+
+interface HashtagsTrendingData {
+  tracked: string[]
+  scanned: DjScan[]
+  errors: { handle: string; error: string }[]
+  sceneTrending: TrendingHashtag[]
+  uniqueToUser: { tag: string; uses: number; avgEngagement: number }[]
+}
+
 interface InstagramData {
   connected: boolean
   error?: string
@@ -79,6 +102,7 @@ interface InstagramData {
     ageGender?: DemoEntry[]
   }
   churn30d?: ChurnData
+  hashtagsTrending?: HashtagsTrendingData
   insights?: unknown[] | null
 }
 
@@ -196,6 +220,7 @@ export default function InstagramPage() {
   const countries = data?.demographics?.countries || []
   const cities = data?.demographics?.cities || []
   const ageGender = data?.demographics?.ageGender || []
+  const trending = data?.hashtagsTrending
 
   // Pyramide âge/genre — agrégation par tranche d'âge
   const ageBuckets = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
@@ -504,6 +529,85 @@ export default function InstagramPage() {
             <p className="text-xs text-gray-500 mt-3 px-3">
               Calcul sur tes 50 derniers posts · seuls les hashtags utilisés ≥ 2 fois sont affichés
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Hashtags Trending — Scène DJ ─── */}
+      {connected && trending && trending.sceneTrending.length > 0 && (
+        <div>
+          <h3 className="section-title">Hashtags Trending — Scène DJ</h3>
+          <div className="card">
+            <p className="text-xs text-gray-500 mb-3 px-1">
+              Scan des 25 derniers posts de {trending.scanned.length}/{trending.tracked.length} DJs trackés
+              {trending.errors.length > 0 && ` · ${trending.errors.length} handle(s) inaccessibles`}
+            </p>
+
+            {/* Trending list */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-white/10">
+                    <th className="py-2 px-3 font-medium">#</th>
+                    <th className="py-2 px-3 font-medium">Hashtag</th>
+                    <th className="py-2 px-3 font-medium text-right">DJs</th>
+                    <th className="py-2 px-3 font-medium text-right">Utilisations</th>
+                    <th className="py-2 px-3 font-medium text-right">Eng. moyen</th>
+                    <th className="py-2 px-3 font-medium text-right">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trending.sceneTrending.map((t, idx) => (
+                    <tr key={t.tag} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="py-2 px-3 text-gray-500">{idx + 1}</td>
+                      <td className="py-2 px-3 font-mono text-[#f0c060]">
+                        {t.tag}
+                        <span className="text-xs text-gray-500 ml-2" title={t.djs.join(', ')}>
+                          ({t.djs.slice(0, 3).join(', ')}{t.djs.length > 3 ? `, +${t.djs.length - 3}` : ''})
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right text-gray-300">{t.djCount}</td>
+                      <td className="py-2 px-3 text-right text-gray-300">{t.uses}</td>
+                      <td className="py-2 px-3 text-right text-[#10b981] font-semibold">{formatFull(t.avgEngagement)}</td>
+                      <td className="py-2 px-3 text-right">
+                        {t.status === 'aligned' ? (
+                          <span className="px-2 py-1 rounded text-xs bg-[#10b981]/20 text-[#10b981]">✅ Aligné</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded text-xs bg-[#f0c060]/20 text-[#f0c060]">💡 Opportunité</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Unique to user */}
+            {trending.uniqueToUser.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <h4 className="text-sm font-semibold text-gray-300 mb-2 px-1">
+                  🎯 Tes hashtags uniques (pas utilisés par les autres DJs)
+                </h4>
+                <div className="flex flex-wrap gap-2 px-1">
+                  {trending.uniqueToUser.map((t) => (
+                    <span key={t.tag} className="px-3 py-1 rounded-full bg-white/5 text-xs font-mono text-[#f0c060] border border-[#f0c060]/30">
+                      {t.tag} <span className="text-gray-500 ml-1">· {t.uses}×</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-3 px-1">
+                  Ces hashtags font partie de ton identité — à conserver pour te démarquer.
+                </p>
+              </div>
+            )}
+
+            {/* DJs scannés (collapsible-ish, juste une ligne de tags) */}
+            <div className="mt-4 pt-3 border-t border-white/5 px-1">
+              <p className="text-xs text-gray-500">
+                <span className="text-gray-400">Source : </span>
+                {trending.scanned.map((d) => `@${d.handle}`).join(' · ')}
+              </p>
+            </div>
           </div>
         </div>
       )}

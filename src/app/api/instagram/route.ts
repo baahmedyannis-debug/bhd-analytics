@@ -7,6 +7,21 @@ const INSTAGRAM_USER_ID = process.env.INSTAGRAM_USER_ID
 // d'un OAuth Facebook (Page Access Token de la Page liée au compte IG Business).
 const GRAPH_BASE = 'https://graph.facebook.com/v21.0'
 
+// Curated list of DJs to track via Business Discovery API
+// Meta does NOT expose "global trending hashtags" → we scan recent posts of these DJs
+const TRACKED_DJS = [
+  'djsnake',
+  'gimsoriginal',
+  'aminemaxwellofficial',
+  'willylevy30',
+  'feder',
+  'blackcoffee',
+  'keinemusik',
+  'hugel',
+  'piazzamusicfr',
+  'this_is_amor',
+]
+
 // ── Helpers backend ───────────────────────────────────
 interface RawMedia {
   id: string
@@ -134,6 +149,88 @@ export async function GET() {
       .sort((a, b) => b.avgEngagement - a.avgEngagement)
       .slice(0, 10)
 
+    // ── Hashtags Trending (Business Discovery sur DJs trackés) ─────────────
+    // Pour chaque handle : on récupère les 25 derniers posts via business_discovery
+    // puis on aggrège les hashtags sur l'ensemble des DJs.
+    interface BizDiscoveryResponse {
+      business_discovery?: {
+        username?: string
+        followers_count?: number
+        media?: { data?: { id: string; caption?: string; like_count?: number; comments_count?: number }[] }
+      }
+      error?: { message: string }
+    }
+
+    const bizDiscoveryPromises = TRACKED_DJS.map((handle) => {
+      const fields = `business_discovery.username(${handle}){username,followers_count,media.limit(25){id,caption,like_count,comments_count}}`
+      const url = `${GRAPH_BASE}/${INSTAGRAM_USER_ID}?fields=${encodeURIComponent(fields)}&access_token=${INSTAGRAM_TOKEN}`
+      return safeFetch<BizDiscoveryResponse>(url)
+    })
+
+    const bizResults = await Promise.all(bizDiscoveryPromises)
+
+    // Aggregate hashtags across all DJs
+    const sceneTagStats: Record<string, { uses: number; djs: Set<string>; totalEng: number; posts: number }> = {}
+    const djErrors: { handle: string; error: string }[] = []
+    const djScanned: { handle: string; postsCount: number; followers: number }[] = []
+
+    bizResults.forEach((raw, idx) => {
+      const handle = TRACKED_DJS[idx]
+      const res = raw as BizDiscoveryResponse
+      if (res.error) {
+        djErrors.push({ handle, error: res.error.message })
+        return
+      }
+      const bd = res.business_discovery
+      if (!bd) {
+        djErrors.push({ handle, error: 'no business_discovery in response' })
+        return
+      }
+      const posts = bd.media?.data || []
+      djScanned.push({ handle, postsCount: posts.length, followers: bd.followers_count || 0 })
+      for (const p of posts) {
+        const tags = Array.from(new Set(extractHashtags(p.caption)))
+        const eng = (p.like_count || 0) + (p.comments_count || 0)
+        for (const t of tags) {
+          if (!sceneTagStats[t]) sceneTagStats[t] = { uses: 0, djs: new Set(), totalEng: 0, posts: 0 }
+          sceneTagStats[t].uses += 1
+          sceneTagStats[t].djs.add(handle)
+          sceneTagStats[t].totalEng += eng
+          sceneTagStats[t].posts += 1
+        }
+      }
+    })
+
+    // Build top trending list (sorted by # of DJs using it, then total engagement)
+    const userTags = new Set(topHashtags.map((t) => t.tag))
+    const sceneTrending = Object.entries(sceneTagStats)
+      .map(([tag, s]) => ({
+        tag,
+        djCount: s.djs.size,
+        djs: Array.from(s.djs),
+        uses: s.uses,
+        avgEngagement: s.posts > 0 ? Math.round(s.totalEng / s.posts) : 0,
+        status: userTags.has(tag) ? 'aligned' : 'opportunity',
+      }))
+      .filter((t) => t.djCount >= 2) // utilisé par au moins 2 DJs pour être "trending"
+      .sort((a, b) => b.djCount - a.djCount || b.avgEngagement - a.avgEngagement)
+      .slice(0, 25)
+
+    // Hashtags uniques à l'utilisateur (que les autres DJs n'utilisent pas)
+    const sceneTagSet = new Set(Object.keys(sceneTagStats))
+    const uniqueToUser = topHashtags
+      .filter((t) => !sceneTagSet.has(t.tag))
+      .slice(0, 10)
+      .map((t) => ({ tag: t.tag, uses: t.uses, avgEngagement: t.avgEngagement }))
+
+    const hashtagsTrending = {
+      tracked: TRACKED_DJS,
+      scanned: djScanned,
+      errors: djErrors,
+      sceneTrending,
+      uniqueToUser,
+    }
+
     // ── Demographics ──────────────────────────────────
     const country = countryRaw as { data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }
     const city = cityRaw as { data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }
@@ -200,6 +297,7 @@ export async function GET() {
         ageGender: ageGenderBreakdown,
       },
       churn30d,
+      hashtagsTrending,
       insights,
     })
   } catch (error) {
