@@ -56,6 +56,14 @@ interface DemoEntry {
   value: number
 }
 
+interface ChurnData {
+  gained: number
+  lost: number
+  net: number
+  churnRate: number
+  dailyGains: { date: string; gained: number }[]
+}
+
 interface InstagramData {
   connected: boolean
   error?: string
@@ -70,6 +78,7 @@ interface InstagramData {
     cities?: DemoEntry[]
     ageGender?: DemoEntry[]
   }
+  churn30d?: ChurnData
   insights?: unknown[] | null
 }
 
@@ -225,6 +234,24 @@ export default function InstagramPage() {
   const maxCountry = Math.max(1, ...countries.map((c) => c.value))
   const maxCity = Math.max(1, ...cities.map((c) => c.value))
 
+  // ── Churn 30j chart (gains quotidiens) ──────────────
+  const churn = data?.churn30d
+  const realDailyGains = churn?.dailyGains || []
+  const realDailyChart = realDailyGains.length > 0
+    ? {
+        labels: realDailyGains.map((d) => {
+          const dt = new Date(d.date)
+          return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+        }),
+        datasets: [{
+          label: 'Abonnés gagnés',
+          data: realDailyGains.map((d) => d.gained),
+          backgroundColor: '#10b981',
+          borderRadius: 4,
+        }],
+      }
+    : null
+
   return (
     <div className="space-y-8">
       <ApiBanner platform="Instagram" connected={connected} loading={loading} error={error} />
@@ -253,8 +280,8 @@ export default function InstagramPage() {
         <ChartContainer title="Portée (30 jours)">
           <Line data={reachData} options={chartOptions} />
         </ChartContainer>
-        <ChartContainer title="Abonnés gagnés (quotidien)">
-          <Bar data={followersData} options={chartOptions} />
+        <ChartContainer title={realDailyChart ? `Abonnés gagnés (30 derniers jours)` : `Abonnés gagnés (quotidien)`}>
+          <Bar data={realDailyChart || followersData} options={chartOptions} />
         </ChartContainer>
       </div>
 
@@ -481,14 +508,49 @@ export default function InstagramPage() {
         </div>
       )}
 
-      {/* Churn Analytics (mock) */}
+      {/* ─── Churn Analytics (30 derniers jours, données réelles) ─── */}
       <div>
-        <h3 className="section-title">Analyse du Churn</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <KpiCard label="Abonnés perdus" value="24" change="-1.2%" positive={false} />
-          <KpiCard label="Croissance nette" value="+92" change="+3.7%" />
-          <KpiCard label="Taux de churn" value="0.9%" change="Stable" />
-        </div>
+        <h3 className="section-title">Analyse du Churn — 30 derniers jours</h3>
+        {connected && churn ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KpiCard
+                label="Abonnés gagnés"
+                value={`+${formatFull(churn.gained)}`}
+                change="30 derniers jours"
+                color="#10b981"
+              />
+              <KpiCard
+                label="Abonnés perdus"
+                value={`−${formatFull(churn.lost)}`}
+                change="30 derniers jours"
+                positive={false}
+              />
+              <KpiCard
+                label="Croissance nette"
+                value={`${churn.net >= 0 ? '+' : ''}${formatFull(churn.net)}`}
+                change={churn.net >= 0 ? 'En croissance' : 'En recul'}
+                color={churn.net >= 0 ? '#10b981' : '#ef4444'}
+                positive={churn.net >= 0}
+              />
+              <KpiCard
+                label="Taux de churn"
+                value={`${churn.churnRate}%`}
+                change={churn.churnRate < 2 ? 'Sain' : churn.churnRate < 5 ? 'Surveiller' : 'À traiter'}
+                positive={churn.churnRate < 2}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-3 px-1">
+              Source : Meta Graph API ({`follows_and_unfollows`}). L&apos;identité des comptes ayant unfollow n&apos;est pas exposée par l&apos;API (privacy).
+            </p>
+          </>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            <KpiCard label="Abonnés perdus" value="—" change="API non connectée" positive={false} />
+            <KpiCard label="Croissance nette" value="—" change="API non connectée" />
+            <KpiCard label="Taux de churn" value="—" change="API non connectée" />
+          </div>
+        )}
       </div>
 
       {/* Recommendations */}

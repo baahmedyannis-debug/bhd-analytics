@@ -64,14 +64,22 @@ export async function GET() {
     const demoAgeGender = `${GRAPH_BASE}/${INSTAGRAM_USER_ID}/insights?metric=follower_demographics&period=lifetime&metric_type=total_value&breakdown=age%2Cgender&access_token=${INSTAGRAM_TOKEN}`
     // Reach (existant)
     const reachUrl = `${GRAPH_BASE}/${INSTAGRAM_USER_ID}/insights?metric=reach&period=day&metric_type=total_value&access_token=${INSTAGRAM_TOKEN}`
+    // Churn 30j : abonnés gagnés + perdus (total période, breakdown follow_type)
+    const nowSec = Math.floor(Date.now() / 1000)
+    const since30 = nowSec - 30 * 24 * 3600
+    const churnTotalUrl = `${GRAPH_BASE}/${INSTAGRAM_USER_ID}/insights?metric=follows_and_unfollows&period=day&metric_type=total_value&breakdown=follow_type&since=${since30}&until=${nowSec}&access_token=${INSTAGRAM_TOKEN}`
+    // Daily gains: time series sur 30j
+    const dailyGainsUrl = `${GRAPH_BASE}/${INSTAGRAM_USER_ID}/insights?metric=follower_count&period=day&since=${since30}&until=${nowSec}&access_token=${INSTAGRAM_TOKEN}`
 
-    const [profileRaw, mediaRaw, countryRaw, cityRaw, ageGenderRaw, reachRaw] = await Promise.all([
+    const [profileRaw, mediaRaw, countryRaw, cityRaw, ageGenderRaw, reachRaw, churnTotalRaw, dailyGainsRaw] = await Promise.all([
       safeFetch<{ id: string; username: string; name?: string; biography?: string; profile_picture_url?: string; media_count?: number; followers_count?: number; follows_count?: number; error?: { message: string } }>(profileUrl),
       safeFetch<{ data?: RawMedia[]; error?: { message: string } }>(mediaUrl),
       safeFetch<{ data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }>(demoCountry),
       safeFetch<{ data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }>(demoCity),
       safeFetch<{ data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }>(demoAgeGender),
       safeFetch<{ data?: unknown[]; error?: { message: string } }>(reachUrl),
+      safeFetch<{ data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }>(churnTotalUrl),
+      safeFetch<{ data?: { values?: { value: number; end_time: string }[] }[]; error?: { message: string } }>(dailyGainsUrl),
     ])
 
     // Profile error → bloque tout
@@ -139,6 +147,35 @@ export async function GET() {
     const reach = reachRaw as { data?: unknown[]; error?: { message: string } }
     const insights = reach.error ? null : reach.data || null
 
+    // ── Churn 30 jours ────────────────────────────────
+    const churnTotal = churnTotalRaw as { data?: { total_value?: { breakdowns?: { results?: DemoBreakdown[] }[] } }[]; error?: { message: string } }
+    let gained = 0
+    let lost = 0
+    if (!churnTotal.error) {
+      const results = churnTotal.data?.[0]?.total_value?.breakdowns?.[0]?.results || []
+      for (const r of results) {
+        if (r.dimension_values?.[0] === 'FOLLOWER') gained = r.value
+        else if (r.dimension_values?.[0] === 'NON_FOLLOWER') lost = r.value
+      }
+    }
+
+    // Daily gains time series
+    const dailyGains = dailyGainsRaw as { data?: { values?: { value: number; end_time: string }[] }[]; error?: { message: string } }
+    const dailySeries = dailyGains.error
+      ? []
+      : (dailyGains.data?.[0]?.values || []).map((v) => ({
+          date: v.end_time.slice(0, 10),
+          gained: v.value,
+        }))
+
+    const churn30d = {
+      gained,
+      lost,
+      net: gained - lost,
+      churnRate: followers > 0 ? Number(((lost / followers) * 100).toFixed(2)) : 0,
+      dailyGains: dailySeries,
+    }
+
     return NextResponse.json({
       connected: true,
       profile: {
@@ -162,6 +199,7 @@ export async function GET() {
         cities,
         ageGender: ageGenderBreakdown,
       },
+      churn30d,
       insights,
     })
   } catch (error) {
